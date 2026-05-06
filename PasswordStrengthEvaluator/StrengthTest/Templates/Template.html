@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Password Strength Tester</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #9E4A4A;
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        input[type="password"] {
+            width: 360px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        input[type="password"]::placeholder {
+            color: #aaa;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 14px 22px;
+            font-size: 1rem;
+            background: white;
+            color: #9E4A4A;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #f0f0f0;
+        }
+
+        .strength-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .box {
+            width: 50px;
+            height: 12px;
+            background: #ddd;
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .box::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: 150%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: black;
+            color: white;
+            padding: 5px 8px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.2s;
+        }
+
+        .box:hover::after {
+            opacity: 1;
+        }
+
+        .red { background: #ff4d4d; }
+        .orange { background: orange; }
+        .yellow { background: gold; }
+        .green { background: #4CAF50; }
+        .darkgreen { background: #4169E1; }
+
+        .side-text {
+            position: absolute;
+            top: 160px;
+            width: 220px;
+            color: white;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .left-text {
+            left: 40px;
+            text-align: left;
+        }
+
+        .right-text {
+            right: 40px;
+            text-align: right;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .toggle-btn {
+            position: absolute;
+            top: 120px;
+            padding: 8px 14px;
+            font-size: 0.9rem;
+            background: white;
+            color: #9E4A4A;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .toggle-btn.left {
+            left: 40px;
+        }
+
+        .toggle-btn.right {
+            right: 40px;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-box {
+            background: white;
+            color: #9E4A4A;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .suggestion-text {
+            color: white;        /* makes text white */
+            margin-top: 15px;    /* pushes it down */
+            text-align: center;  /* optional: center it */
+        }
+    </style>
+</head>
+<body>
+    <h1>Password Strength Evaluator</h1>
+
+    <form method="POST" onsubmit="showLoading()">
+        <div class="input-row">
+
+            <label>
+                <input type="password" name="password" placeholder="Input password here" value="{{ password or '' }}" required autofocus>
+            </label>
+            <button type="submit">Enter</button>
+        </div>
+
+        <div class="strength-bar">
+            <div class="box {{ colors[0] }}" data-label="Brute Force"></div>
+            <div class="box {{ colors[1] }}" data-label="Common Guesses"></div>
+            <div class="box {{ colors[2] }}" data-label="Dictionary Attack"></div>
+            <div class="box {{ colors[3] }}" data-label="Mask Attack"></div>
+            <div class="box {{ colors[4] }}" data-label="Mangling Attack"></div>
+        </div>
+
+        {% if stats %}
+            <p class="suggestion-text">Suggestion : {{ stats[2] }}</p>
+        {% endif %}
+
+
+    </form>
+
+    <button type="button" class="toggle-btn left" onclick="toggleText('leftText', this)">
+        Hide Information
+    </button>
+
+    <button type="button" class="toggle-btn right" onclick="toggleText('rightText', this)">
+        Hide Statistics
+    </button>
+
+    <div id="leftText" class="side-text left-text">
+        <h3>Information</h3>
+        <p>This is a Password Strength Tester. Input your password and press enter.
+        The app will simulate real attack methods against your password. It will NOT store your password,
+        but it may take up to 1 minute depending on the password so sit tight :).</p>
+
+        <h3>Scoring</h3>
+        <p>Each coloured bar represents the strength of your password against each attack method.
+        Red = Extremely Weak, Yellow = Weak, Orange = Moderate, Green = Strong, Blue = Extremely Strong.</p>
+    </div>
+
+    <div id="rightText" class="side-text right-text">
+            {% if stats %}
+                <p> Cracked in : {{ stats[0] }}</p>
+                <p> Password rating : {{ stats[1] }} /4</p>
+
+            {% endif %}
+    </div>
+
+    <div id="loadingOverlay">
+        <div class="loading-box">Processing password...</div>
+    </div>
+
+    <script>
+        function toggleText(id, button) {
+            const textBlock = document.getElementById(id);
+            textBlock.classList.toggle("hidden");
+
+            if (textBlock.classList.contains("hidden")) {
+                button.textContent = id === "leftText" ? "Show Information" : "Show Statistics";
+            } else {
+                button.textContent = id === "leftText" ? "Hide Information" : "Hide Statistics";
+            }
+        }
+
+        function showLoading() {
+            document.getElementById("loadingOverlay").style.display = "flex";
+        }
+    </script>
+</body>
+</html>
